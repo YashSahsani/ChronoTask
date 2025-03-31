@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: flask-app
+          env:
+            - name: DEBUG
+              value: "true"

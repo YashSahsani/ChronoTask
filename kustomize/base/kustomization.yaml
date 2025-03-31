@@ -1,0 +1,4 @@
+resources:
+  - mongo-deployment.yaml
+  - flask-deployment.yaml
+  - flask-service.yaml
