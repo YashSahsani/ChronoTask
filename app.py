@@ -17,7 +17,6 @@ scheduler.start()
 
 # Connect to MongoDB and use the 'slack' database
 MONGO_URI = os.getenv('MONGO_URI',"mongodb://127.0.0.1:27017")
-print(MONGO_URI)
 client = MongoClient(MONGO_URI)
 db = client["slack"]
 collection = db["scheduled_jobs"]
