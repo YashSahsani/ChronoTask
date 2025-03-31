@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Job</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-200">
+    <div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold text-center">Schedule a Message</h2>
+        <form id="scheduleForm" class="mt-4">
+            <!-- Message Input -->
+            <label class="block mb-2 text-sm font-medium text-gray-700">Message</label>
+            <input type="text" id="message" class="w-full p-2 border rounded" required>
+
+            <!-- Date & Time Input -->
+            <label class="block mt-4 mb-2 text-sm font-medium text-gray-700">Date & Time</label>
+            <input type="datetime-local" id="date_time" class="w-full p-2 border rounded" required>
+
+            <!-- Weekday Checkboxes -->
+            <label class="block mt-4 mb-2 text-sm font-medium text-gray-700">Repeat on:</label>
+            <div class="grid grid-cols-3 gap-2">
+                <label><input type="checkbox" class="weekday" value="mon"> Monday</label>
+                <label><input type="checkbox" class="weekday" value="tue"> Tuesday</label>
+                <label><input type="checkbox" class="weekday" value="wed"> Wednesday</label>
+                <label><input type="checkbox" class="weekday" value="thu"> Thursday</label>
+                <label><input type="checkbox" class="weekday" value="fri"> Friday</label>
+                <label><input type="checkbox" class="weekday" value="sat"> Saturday</label>
+                <label><input type="checkbox" class="weekday" value="sun"> Sunday</label>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-700">Schedule</button>
+        </form>
+        <p id="response" class="mt-4 text-center text-green-600"></p>
+    </div>
+
+    <script>
+        document.getElementById("scheduleForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            
+            let message = document.getElementById("message").value;
+            let date_time = document.getElementById("date_time").value.replace("T", " ") + ":00";
+
+            // Collect checked weekdays
+            let weekdays = [];
+            document.querySelectorAll(".weekday:checked").forEach((checkbox) => {
+                weekdays.push(checkbox.value);
+            });
+
+            let response = await fetch("/schedule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message, date_time, repeat_days: weekdays })
+            });
+
+            let result = await response.json();
+            document.getElementById("response").innerText = result.message;
+        });
+    </script>
+</body>
+</html>

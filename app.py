@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pymongo import MongoClient
@@ -65,8 +65,16 @@ def add_job_to_scheduler(job_id, message, date_time, repeat_days):
             replace_existing=True
         )
 
-@app.route('/schedule', methods=['POST'])
+@app.route('/')
+def home():
+    return render_template("index.html")
+
+
+@app.route('/schedule',  methods=['GET', 'POST'])
 def schedule_message():
+    if request.method == "GET":
+        return render_template("schedule.html")
+
     """API to schedule a new message."""
     data = request.get_json()
     message = data.get("message")
@@ -110,7 +118,7 @@ def get_jobs():
         job["date_time"] = job["date_time"].isoformat()
         if job.get("executed_at"):
             job["executed_at"] = job["executed_at"].isoformat()
-    return jsonify(jobs)
+    return render_template("jobs.html", jobs=jobs)
 
 @app.route('/delete/<job_id>', methods=['DELETE'])
 def delete_job(job_id):

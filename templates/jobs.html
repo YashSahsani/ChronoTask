@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduled Jobs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold text-center text-gray-700">Scheduled Jobs</h2>
+        <table class="w-full mt-4 border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border p-2">Message</th>
+                    <th class="border p-2">Date</th>
+                    <th class="border p-2">Status</th>
+                </tr>
+            </thead>
+            <tbody id="jobsTable">
+                {% for job in jobs %}
+                <tr class="border">
+                    <td class="p-2 border">{{ job.message }}</td>
+                    <td class="p-2 border">{{ job.date_time }}</td>
+                    <td class="p-2 border">{{ job.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
