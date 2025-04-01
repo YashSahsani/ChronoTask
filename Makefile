@@ -6,3 +6,5 @@ delete-dev:
 	kubectl delete  -k kustomize/overlays/dev && minikube stop
 delete-prod:
 	kubectl delete  -k kustomize/overlays/prod && minikube stop
+app-url:
+	minikube service flask-service --url
