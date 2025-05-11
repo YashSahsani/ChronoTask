@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Email Template Builder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #builder {
+      max-width: 900px;
+      margin: auto;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #template-area {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      min-height: 200px;
+      background: #fafafa;
+    }
+    .template-block {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #ddd;
+    }
+    input[type="text"], textarea, input[type="datetime-local"] {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    td, th {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    td[contenteditable="true"] {
+      background: #fffbe6;
+    }
+    .table-controls {
+      margin-top: 10px;
+    }
+    .table-controls button {
+      margin-right: 5px;
+    }
+    .input-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-label input[type="text"] {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="builder">
+    <h1>Email Template Builder</h1>
+    <button onclick="addElement('heading')">Add Heading</button>
+    <button onclick="addElement('textarea')">Add Text</button>
+    <button onclick="addElement('datetime')">Add Date/Time</button>
+    <button onclick="addElement('table')">Add Table</button>
+    <button onclick="addElement('checkbox')">Add Checkbox</button>
+    <button onclick="addElement('radio')">Add Radio Button</button>
+    <button onclick="saveTemplate()">Save Template</button>
+
+    <div id="template-area"></div>
+  </div>
+
+  <script>
+    function addElement(type) {
+      const container = document.getElementById('template-area');
+      let element;
+
+      switch (type) {
+        case 'heading':
+          element = document.createElement('input');
+          element.type = 'text';
+          element.placeholder = 'Enter heading text';
+          element.className = 'template-block heading';
+          break;
+
+        case 'textarea':
+          element = document.createElement('textarea');
+          element.placeholder = 'Enter your content';
+          element.className = 'template-block textarea';
+          break;
+
+        case 'datetime':
+          element = document.createElement('input');
+          element.type = 'datetime-local';
+          element.className = 'template-block datetime';
+          break;
+
+        case 'checkbox':
+          element = document.createElement('div');
+          element.className = 'template-block checkbox';
+          element.innerHTML = `
+            <div class="input-label">
+              <input type="checkbox" disabled>
+              <input type="text" placeholder="Checkbox label" />
+            </div>
+          `;
+          break;
+
+        case 'radio':
+          element = document.createElement('div');
+          element.className = 'template-block radio';
+          element.innerHTML = `
+            <div class="input-label">
+              <input type="radio" disabled>
+              <input type="text" placeholder="Radio button label" />
+            </div>
+          `;
+          break;
+
+        case 'table':
+          element = document.createElement('div');
+          element.className = 'template-block table-block';
+
+          const tableId = 'table-' + Math.random().toString(36).substr(2, 9);
+          element.innerHTML = `
+            <table id="${tableId}">
+              <tr><td contenteditable="true">Header 1</td><td contenteditable="true">Header 2</td></tr>
+              <tr><td contenteditable="true">Data 1</td><td contenteditable="true">Data 2</td></tr>
+            </table>
+            <div class="table-controls">
+              <button onclick="addTableRow('${tableId}')">Add Row</button>
+              <button onclick="addTableColumn('${tableId}')">Add Column</button>
+              <button onclick="removeTableRow('${tableId}')">Remove Row</button>
+              <button onclick="removeTableColumn('${tableId}')">Remove Column</button>
+              <button onclick="this.closest('.template-block').remove()">Delete Table</button>
+            </div>
+          `;
+          break;
+
+        default:
+          return;
+      }
+
+      container.appendChild(element);
+    }
+
+    function addTableRow(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const cols = table.rows[0].cells.length;
+      const row = table.insertRow();
+      for (let i = 0; i < cols; i++) {
+        const cell = row.insertCell();
+        cell.contentEditable = "true";
+        cell.textContent = `New`;
+      }
+    }
+
+    function removeTableRow(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table || table.rows.length <= 1) return;
+      table.deleteRow(-1);
+    }
+
+    function addTableColumn(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      for (let row of table.rows) {
+        const cell = row.insertCell();
+        cell.contentEditable = "true";
+        cell.textContent = "New";
+      }
+    }
+
+    function removeTableColumn(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const cols = table.rows[0].cells.length;
+      if (cols <= 1) return;
+      for (let row of table.rows) {
+        row.deleteCell(-1);
+      }
+    }
+
+    function saveTemplate() {
+      const blocks = document.querySelectorAll('.template-block');
+      const template = [];
+
+      blocks.forEach(block => {
+        if (block.classList.contains('heading')) {
+          template.push({ type: 'heading', content: block.value });
+        } else if (block.classList.contains('textarea')) {
+          template.push({ type: 'textarea', content: block.value });
+        } else if (block.classList.contains('datetime')) {
+          template.push({ type: 'datetime', content: block.value });
+        } else if (block.classList.contains('checkbox')) {
+          const label = block.querySelector('input[type="text"]').value;
+          template.push({ type: 'checkbox', content: label });
+        } else if (block.classList.contains('radio')) {
+          const label = block.querySelector('input[type="text"]').value;
+          template.push({ type: 'radio', content: label });
+        } else if (block.classList.contains('table-block')) {
+          const table = block.querySelector('table');
+          const rows = [];
+          table.querySelectorAll('tr').forEach(row => {
+            const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+            rows.push(cells);
+          });
+          template.push({ type: 'table', content: rows });
+        }
+      });
+
+      fetch('/save_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template })
+      })
+      .then(response => response.json())
+      .then(data => alert('Template saved successfully!'))
+      .catch(err => console.error('Save failed:', err));
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, redirect, request, jsonify, render_template, session, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from pymongo import MongoClient
@@ -6,7 +6,13 @@ import datetime
 import uuid
 import json
 import os
-
+import html
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from flask_mail import Mail, Message
+from render_template_from_json import render_html_from_json
 def create_app():
     app = Flask(__name__)
     return app
@@ -14,12 +20,22 @@ def create_app():
 app = create_app()
 scheduler = BackgroundScheduler()
 scheduler.start()
+app.secret_key = '1234'
 
 # Connect to MongoDB and use the 'slack' database
 MONGO_URI = os.getenv('MONGO_URI',"mongodb://127.0.0.1:27017")
 client = MongoClient(MONGO_URI)
 db = client["slack"]
 collection = db["scheduled_jobs"]
+template_collection = db["message_templates"]
+users = db["users"]
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'         # Or your provider
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = "yashs6feb@gmail.com"  # Your SMTP email
+app.config['MAIL_PASSWORD'] = ''   # App password or real password
+mail = Mail(app)
 
 print("Connected to MongoDB database: slack", flush=True)
 
@@ -159,6 +175,119 @@ def load_pending_jobs():
                     add_job_to_scheduler(job_id, message, date_time, repeat_days)
                 else:
                     print_message(job_id, message)
+
+
+
+
+@app.route('/save_template', methods=['POST', 'GET'])
+def save_template():
+    if request.method == 'GET':
+        return render_template('template_builder.html')  # Your HTML builder
+
+    template_data = request.json.get('template')
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({'error': 'Not logged in'}), 403
+
+    # Save to MongoDB and session
+    session['current_template'] = template_data
+    template_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"template": template_data}},
+        upsert=True
+    )
+    return jsonify({'status': 'saved'})
+
+@app.route('/load_template', methods=['GET'])
+def load_template():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not logged in'}), 403
+
+    doc = template_collection.find_one({"user_id": user_id})
+    return jsonify(doc.get('template', []))
+
+@app.route('/render_template_email', methods=['GET'])
+def render_template_email():
+    user_id = session.get('user_id')
+    if not user_id:
+        return "Not logged in", 403
+
+    doc = template_collection.find_one({"user_id": user_id})
+    template_data = doc.get('template', [])
+
+    rendered_html = render_html_from_json(template_data)
+    return rendered_html  # This can be emailed using an email lib like Flask-Mail
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')  # Create this HTML form
+
+    email = request.form['email']
+    password = request.form['password']
+
+    user = users.find_one({"email": email, "password": password})
+    print(user)
+    if user:
+        session['user_id'] = str(user['_id'])
+        return redirect(url_for('save_template'))
+    return "Invalid credentials", 401
+
+# Route: Logout
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+
+    email = request.form['email']
+    password = request.form['password']
+
+    if users.find_one({"email": email}):
+        return "Email already registered", 409
+
+    users.insert_one({"email": email, "password": password})
+    return redirect(url_for('login'))
+
+@app.route('/send_email', methods=['GET'])
+def send_email_form():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('send_email.html')
+
+@app.route('/send_email', methods=['POST'])
+def send_email():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    # Load the user's saved template
+    doc = template_collection.find_one({"user_id": user_id})
+    template_data = doc.get('template', [])
+    html_body = render_html_from_json(template_data)
+
+    recipient = request.form.get('to')
+    subject = request.form.get('subject', 'Your Custom Email')
+
+    if not recipient:
+        return "Recipient email is required", 400
+
+    msg = Message(
+        subject=subject,
+        sender=app.config['MAIL_USERNAME'],
+        recipients=[recipient],
+        html=html_body
+    )
+
+    mail.send(msg)
+    return "Email sent successfully!"
+
 
 if __name__ == '__main__':
     print(f"System Time: {datetime.datetime.now()}")
